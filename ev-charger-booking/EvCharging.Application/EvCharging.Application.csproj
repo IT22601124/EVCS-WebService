@@ -2,7 +2,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\EvCharging.Domain\EvCharging.Domain.csproj" />
-    <ProjectReference Include="..\EvCharging.Infrastructure\EvCharging.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>
