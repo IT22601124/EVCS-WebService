@@ -1,0 +1,40 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EvCharging.Api", "EvCharging.Api\EvCharging.Api.csproj", "{20BB0D42-C62E-456C-A3E9-37B82DBC39F6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EvCharging.Domain", "EvCharging.Domain\EvCharging.Domain.csproj", "{DA491C74-C7D2-4428-9BC3-73875E4BFF0C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EvCharging.Application", "EvCharging.Application\EvCharging.Application.csproj", "{5A9978F5-38C4-4D9F-90B6-8AE4ED408B89}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EvCharging.Infrastructure", "EvCharging.Infrastructure\EvCharging.Infrastructure.csproj", "{D5963BB4-A6C7-4808-A2AA-759AAD5B2126}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{20BB0D42-C62E-456C-A3E9-37B82DBC39F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{20BB0D42-C62E-456C-A3E9-37B82DBC39F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{20BB0D42-C62E-456C-A3E9-37B82DBC39F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{20BB0D42-C62E-456C-A3E9-37B82DBC39F6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DA491C74-C7D2-4428-9BC3-73875E4BFF0C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DA491C74-C7D2-4428-9BC3-73875E4BFF0C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DA491C74-C7D2-4428-9BC3-73875E4BFF0C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DA491C74-C7D2-4428-9BC3-73875E4BFF0C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5A9978F5-38C4-4D9F-90B6-8AE4ED408B89}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A9978F5-38C4-4D9F-90B6-8AE4ED408B89}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A9978F5-38C4-4D9F-90B6-8AE4ED408B89}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A9978F5-38C4-4D9F-90B6-8AE4ED408B89}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D5963BB4-A6C7-4808-A2AA-759AAD5B2126}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D5963BB4-A6C7-4808-A2AA-759AAD5B2126}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D5963BB4-A6C7-4808-A2AA-759AAD5B2126}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D5963BB4-A6C7-4808-A2AA-759AAD5B2126}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
