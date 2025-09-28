@@ -14,10 +14,12 @@ using Serilog;
 var builder = WebApplication.CreateBuilder(args);
 
 // Serilog
-Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateLogger();
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .CreateLogger();
 builder.Host.UseSerilog();
 
-// Config
+// Configuration binding
 builder.Services.Configure<MongoSettings>(builder.Configuration.GetSection("Mongo"));
 builder.Services.AddSingleton<MongoDbContext>();
 
@@ -30,10 +32,11 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IOwnerService, OwnerService>();
 builder.Services.AddScoped<IStationService, StationService>();
 builder.Services.AddScoped<IScheduleService, ScheduleService>();
+builder.Services.AddScoped<IBookingService, BookingService>(); // ✅ NEW: bookings
 
 builder.Services.AddControllers();
 
-// Auth
+// JWT Auth
 var jwtSecret = builder.Configuration["Jwt:Secret"]!;
 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
 
@@ -54,11 +57,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
+// Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+// Global exception handler
 app.UseMiddleware<ExceptionMiddleware>();
 
 if (app.Environment.IsDevelopment())
@@ -73,11 +78,13 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Seed + indexes
+// Seed data + ensure indexes
 await SeedAsync(app.Services);
 await EnsureIndexesAsync(app.Services);
 
 app.Run();
+
+// ---- helpers ----
 
 static async Task SeedAsync(IServiceProvider services)
 {
