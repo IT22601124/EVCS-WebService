@@ -29,3 +29,16 @@ public interface IScheduleService
     Task<ScheduleResponse> UpsertAsync(UpsertScheduleRequest req);
     Task<List<ScheduleResponse>> GetByStationAndDateAsync(string stationId, DateOnly date);
 }
+
+public interface IBookingService
+{
+    Task<BookingResponse> CreateAsync(CreateBookingRequest req);
+    Task<BookingResponse?> GetByIdAsync(string id);
+    Task<List<BookingResponse>> GetByOwnerAsync(string nic);
+    Task<List<BookingResponse>> GetByStationAndDateAsync(string stationId, DateOnly date);
+    Task UpdateAsync(string id, UpdateBookingRequest req);
+    Task CancelAsync(string id);
+    Task<BookingResponse> ApproveAsync(string id);
+    Task<ScanResponse> ScanAsync(string qrToken);
+    Task FinalizeAsync(string id);
+}
