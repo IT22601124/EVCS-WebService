@@ -11,17 +11,23 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 
+// FluentValidation
+using FluentValidation;
+using FluentValidation.AspNetCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Serilog
-Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateLogger();
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .CreateLogger();
 builder.Host.UseSerilog();
 
-// Config
+// Configuration (Mongo)
 builder.Services.Configure<MongoSettings>(builder.Configuration.GetSection("Mongo"));
 builder.Services.AddSingleton<MongoDbContext>();
 
-// Repositories (generic)
+// Generic repository
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
 // Services
@@ -30,12 +36,17 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IOwnerService, OwnerService>();
 builder.Services.AddScoped<IStationService, StationService>();
 builder.Services.AddScoped<IScheduleService, ScheduleService>();
-builder.Services.AddScoped<IBookingService, BookingService>(); // bookings
-builder.Services.AddScoped<IUserService, UserService>();       // user management
+builder.Services.AddScoped<IBookingService, BookingService>();
+builder.Services.AddScoped<IUserService, UserService>();
 
+// MVC / Controllers
 builder.Services.AddControllers();
 
-// Auth
+// FluentValidation: auto-run + discover validators from Application assembly
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<EvCharging.Application.Validators.CreateOwnerRequestValidator>();
+
+// Authentication (JWT)
 var jwtSecret = builder.Configuration["Jwt:Secret"]!;
 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
 
@@ -56,11 +67,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-// CORS (dev policy)
+// CORS (dev-friendly; tighten in prod)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", b =>
-        b.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+        b.AllowAnyOrigin()
+         .AllowAnyHeader()
+         .AllowAnyMethod());
 });
 
 // Swagger
@@ -69,6 +82,7 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+// Global exception handling
 app.UseMiddleware<ExceptionMiddleware>();
 
 if (app.Environment.IsDevelopment())
@@ -84,13 +98,13 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Seed + indexes
+// Seed admin user + ensure Mongo indexes
 await SeedAsync(app.Services);
 await EnsureIndexesAsync(app.Services);
 
 app.Run();
 
-// ---- helpers ----
+// ----------------- Helpers -----------------
 
 static async Task SeedAsync(IServiceProvider services)
 {
