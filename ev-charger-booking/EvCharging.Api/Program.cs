@@ -14,12 +14,10 @@ using Serilog;
 var builder = WebApplication.CreateBuilder(args);
 
 // Serilog
-Log.Logger = new LoggerConfiguration()
-    .WriteTo.Console()
-    .CreateLogger();
+Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateLogger();
 builder.Host.UseSerilog();
 
-// Configuration binding
+// Config
 builder.Services.Configure<MongoSettings>(builder.Configuration.GetSection("Mongo"));
 builder.Services.AddSingleton<MongoDbContext>();
 
@@ -32,11 +30,12 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IOwnerService, OwnerService>();
 builder.Services.AddScoped<IStationService, StationService>();
 builder.Services.AddScoped<IScheduleService, ScheduleService>();
-builder.Services.AddScoped<IBookingService, BookingService>(); // ✅ NEW: bookings
+builder.Services.AddScoped<IBookingService, BookingService>(); // bookings
+builder.Services.AddScoped<IUserService, UserService>();       // user management
 
 builder.Services.AddControllers();
 
-// JWT Auth
+// Auth
 var jwtSecret = builder.Configuration["Jwt:Secret"]!;
 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
 
@@ -57,13 +56,19 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
+// CORS (dev policy)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", b =>
+        b.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+});
+
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Global exception handler
 app.UseMiddleware<ExceptionMiddleware>();
 
 if (app.Environment.IsDevelopment())
@@ -74,11 +79,12 @@ if (app.Environment.IsDevelopment())
 
 app.UseSerilogRequestLogging();
 app.UseHttpsRedirection();
+app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Seed data + ensure indexes
+// Seed + indexes
 await SeedAsync(app.Services);
 await EnsureIndexesAsync(app.Services);
 

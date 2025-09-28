@@ -1,5 +1,4 @@
 using EvCharging.Application.DTOs;
-using EvCharging.Domain.Entities;
 
 namespace EvCharging.Application.Contracts;
 
@@ -41,4 +40,12 @@ public interface IBookingService
     Task<BookingResponse> ApproveAsync(string id);
     Task<ScanResponse> ScanAsync(string qrToken);
     Task FinalizeAsync(string id);
+}
+
+public interface IUserService
+{
+    Task<UserResponse> CreateAsync(CreateUserRequest req);
+    Task<List<UserResponse>> GetAllAsync();
+    Task<UserResponse?> GetByUsernameAsync(string username);
+    Task UpdateAsync(string username, UpdateUserRequest req);
 }

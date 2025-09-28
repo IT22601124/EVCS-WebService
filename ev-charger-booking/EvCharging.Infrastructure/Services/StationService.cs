@@ -50,15 +50,14 @@ public class StationService : IStationService
     {
         var entity = await _stations.GetByIdAsync(id) ?? throw new KeyNotFoundException("Station not found");
 
-        // Business rule (Day 3–4): prevent deactivation if there are active bookings
-        // Active bookings are those in Pending or Approved state, regardless of date.
+        // Business rule: prevent deactivation if there are active bookings
         if (entity.IsActive && !req.IsActive)
         {
-            var activeBookings = await _bookings.FindAsync(b =>
+            var active = await _bookings.FindAsync(b =>
                 b.StationId == id &&
                 (b.Status == BookingStatus.Pending || b.Status == BookingStatus.Approved));
 
-            if (activeBookings.Any())
+            if (active.Any())
                 throw new InvalidOperationException("Cannot deactivate station with active bookings");
         }
 
