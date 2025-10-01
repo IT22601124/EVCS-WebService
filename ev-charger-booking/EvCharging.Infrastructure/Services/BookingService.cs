@@ -9,9 +9,20 @@ public class BookingService : IBookingService
 {
     private readonly IRepository<Booking> _bookings;
     private readonly IRepository<StationSchedule> _schedules;
+    private readonly IRepository<EvOwner> _owners;
+    private readonly IRepository<Station> _stations;
 
-    public BookingService(IRepository<Booking> bookings, IRepository<StationSchedule> schedules)
-    { _bookings = bookings; _schedules = schedules; }
+    public BookingService(
+        IRepository<Booking> bookings, 
+        IRepository<StationSchedule> schedules,
+        IRepository<EvOwner> owners,
+        IRepository<Station> stations)
+    { 
+        _bookings = bookings; 
+        _schedules = schedules;
+        _owners = owners;
+        _stations = stations;
+    }
 
     public async Task<BookingResponse> CreateAsync(CreateBookingRequest req)
     {
@@ -21,6 +32,15 @@ public class BookingService : IBookingService
 
         if (req.End <= req.Start)
             throw new InvalidOperationException("End time must be after Start time");
+
+        // Verify owner exists and is active
+        var owner = (await _owners.FindAsync(o => o.Nic == req.Nic && o.IsActive)).FirstOrDefault()
+            ?? throw new InvalidOperationException("Owner not found or inactive");
+
+        // Verify station exists and is active
+        var station = await _stations.GetByIdAsync(req.StationId);
+        if (station == null || !station.IsActive)
+            throw new InvalidOperationException("Station not found or inactive");
 
         var schedule = (await _schedules.FindAsync(s => s.StationId == req.StationId && s.Date == req.Date)).FirstOrDefault()
             ?? throw new InvalidOperationException("No schedule published for the selected date");
@@ -45,20 +65,47 @@ public class BookingService : IBookingService
             Status = BookingStatus.Pending
         };
         await _bookings.InsertAsync(entity);
-        return Map(entity);
+        return MapEnhanced(entity, owner, station);
     }
 
     public async Task<BookingResponse?> GetByIdAsync(string id)
     {
         var e = await _bookings.GetByIdAsync(id);
-        return e is null ? null : Map(e);
+        if (e is null) return null;
+        
+        var owner = (await _owners.FindAsync(o => o.Nic == e.Nic)).FirstOrDefault();
+        var station = await _stations.GetByIdAsync(e.StationId);
+        
+        return MapEnhanced(e, owner, station);
     }
 
     public async Task<List<BookingResponse>> GetByOwnerAsync(string nic)
-        => (await _bookings.FindAsync(b => b.Nic == nic)).Select(Map).ToList();
+    {
+        var bookings = await _bookings.FindAsync(b => b.Nic == nic);
+        var owner = (await _owners.FindAsync(o => o.Nic == nic)).FirstOrDefault();
+        
+        var results = new List<BookingResponse>();
+        foreach (var booking in bookings)
+        {
+            var station = await _stations.GetByIdAsync(booking.StationId);
+            results.Add(MapEnhanced(booking, owner, station));
+        }
+        return results;
+    }
 
     public async Task<List<BookingResponse>> GetByStationAndDateAsync(string stationId, DateOnly date)
-        => (await _bookings.FindAsync(b => b.StationId == stationId && b.Date == date)).Select(Map).ToList();
+    {
+        var bookings = await _bookings.FindAsync(b => b.StationId == stationId && b.Date == date);
+        var station = await _stations.GetByIdAsync(stationId);
+        
+        var results = new List<BookingResponse>();
+        foreach (var booking in bookings)
+        {
+            var owner = (await _owners.FindAsync(o => o.Nic == booking.Nic)).FirstOrDefault();
+            results.Add(MapEnhanced(booking, owner, station));
+        }
+        return results;
+    }
 
     public async Task UpdateAsync(string id, UpdateBookingRequest req)
     {
@@ -100,7 +147,11 @@ public class BookingService : IBookingService
         e.QrToken = Guid.NewGuid().ToString("N");
         e.UpdatedAt = DateTime.UtcNow;
         await _bookings.UpdateAsync(e.Id, e);
-        return Map(e);
+        
+        var owner = (await _owners.FindAsync(o => o.Nic == e.Nic)).FirstOrDefault();
+        var station = await _stations.GetByIdAsync(e.StationId);
+        
+        return MapEnhanced(e, owner, station);
     }
 
     public async Task<ScanResponse> ScanAsync(string qrToken)
@@ -109,7 +160,22 @@ public class BookingService : IBookingService
             ?? throw new KeyNotFoundException("Invalid QR token");
         if (e.Status != BookingStatus.Approved)
             throw new InvalidOperationException("Booking is not in Approved state");
-        return new ScanResponse(e.Id, e.Nic, e.StationId, e.Date, e.Start, e.End, e.Status);
+        
+        var owner = (await _owners.FindAsync(o => o.Nic == e.Nic)).FirstOrDefault();
+        var station = await _stations.GetByIdAsync(e.StationId);
+        
+        return new ScanResponse(
+            e.Id,
+            e.Nic,
+            owner?.FullName ?? "Unknown Owner",
+            e.StationId,
+            station?.Name ?? "Unknown Station",
+            station?.Address ?? "N/A",
+            e.Date,
+            e.Start,
+            e.End,
+            e.Status
+        );
     }
 
     public async Task FinalizeAsync(string id)
@@ -121,8 +187,27 @@ public class BookingService : IBookingService
         await _bookings.UpdateAsync(e.Id, e);
     }
 
-    private static BookingResponse Map(Booking e)
-        => new(e.Id, e.Nic, e.StationId, e.Date, e.Start, e.End, e.Status, e.QrToken);
+    private static BookingResponse MapEnhanced(Booking e, EvOwner? owner, Station? station)
+    {
+        return new BookingResponse(
+            e.Id,
+            e.Nic,
+            owner?.FullName ?? "Unknown Owner",
+            owner?.Email ?? "N/A",
+            owner?.Phone ?? "N/A",
+            e.StationId,
+            station?.Name ?? "Unknown Station",
+            station?.Address ?? "N/A",
+            station?.Type ?? "AC",
+            e.Date,
+            e.Start,
+            e.End,
+            e.Status,
+            e.QrToken,
+            e.CreatedAt,
+            e.UpdatedAt
+        );
+    }
 
     private static void EnsureChangeAllowed(Booking e)
     {

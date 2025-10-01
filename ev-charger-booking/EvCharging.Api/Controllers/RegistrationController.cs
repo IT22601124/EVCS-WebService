@@ -19,11 +19,12 @@ public class RegistrationController : ControllerBase
 
     // Public owner sign-up (no auth): creates EvOwner + User (Owner role)
     [HttpPost("owner")]
-    [ProducesResponseType(typeof(OwnerResponse), 200)]
-    public async Task<ActionResult<OwnerResponse>> RegisterOwner([FromBody] CreateOwnerRequest req)
+    [ProducesResponseType(typeof(OwnerRegistrationResponse), 200)]
+    public async Task<ActionResult<OwnerRegistrationResponse>> RegisterOwner([FromBody] CreateOwnerRequest req)
     {
         var owner = await _owners.CreateAsync(req);
 
+        var userRole = Roles.Owner;
         var exists = (await _users.FindAsync(u => u.Username == req.Nic)).Any();
         if (!exists)
         {
@@ -31,13 +32,24 @@ public class RegistrationController : ControllerBase
             {
                 Id = Guid.NewGuid().ToString("N"),
                 Username = req.Nic,
-                PasswordHash = PasswordHasher.Hash(req.Nic), // simple default; front-end can prompt change
-                Role = Roles.Owner,
+                PasswordHash = PasswordHasher.Hash(req.Password), // Use provided password instead of NIC
+                Role = userRole,
                 IsActive = true
             };
             await _users.InsertAsync(user);
         }
 
-        return Ok(owner);
+        // Return response with role information
+        var response = new OwnerRegistrationResponse(
+            owner.Nic, 
+            owner.FullName, 
+            owner.Email, 
+            owner.Phone, 
+            owner.IsActive, 
+            userRole
+        );
+        Console.WriteLine($"Registered new owner: {owner.Nic} with role {userRole}");
+
+        return Ok(response);
     }
 }
