@@ -15,7 +15,7 @@ public class StationsController : ControllerBase
 
 
     [HttpPost]
-    [Authorize(Roles = Roles.Backoffice)]
+    [Authorize(Roles = $"{Roles.Backoffice},{Roles.Operator}")]
     public async Task<ActionResult<StationResponse>> Create([FromBody] CreateStationRequest req)
         => Ok(await _stations.CreateAsync(req));
 
@@ -42,7 +42,7 @@ public class StationsController : ControllerBase
 
 
     [HttpPut("{id}")]
-    [Authorize(Roles = Roles.Backoffice)]
+    [Authorize(Roles = $"{Roles.Backoffice},{Roles.Operator}")]
     public async Task<IActionResult> Update(string id, [FromBody] UpdateStationRequest req)
     {
         await _stations.UpdateAsync(id, req);

@@ -34,9 +34,10 @@ public class AuthService : IAuthService
         // Check if user is an Owner and get owner details
         bool isOwner = false;
         string? ownerNic = null;
-        string? fullName = null;
-        string? email = null;
-        string? phone = null;
+        string nic = user.Nic;
+        string fullName = user.FullName;
+        string email = user.Email;
+        string phone = user.Phone;
         
         if (user.Role == Roles.Owner)
         {
@@ -46,12 +47,26 @@ public class AuthService : IAuthService
             {
                 isOwner = true;
                 ownerNic = ownerRecord.Nic;
+                // Use owner record details if available, otherwise fall back to user details
+                nic = ownerRecord.Nic;
                 fullName = ownerRecord.FullName;
                 email = ownerRecord.Email;
                 phone = ownerRecord.Phone;
             }
         }
 
-        return new LoginResponse(token, exp, user.Role, user.Username, isOwner, ownerNic, fullName, email, phone);
+        return new LoginResponse(
+            nic,
+            fullName,
+            email,
+            phone,
+            user.IsActive,
+            user.Role,
+            token,
+            exp,
+            user.Username,
+            isOwner,
+            ownerNic
+        );
     }
 }
