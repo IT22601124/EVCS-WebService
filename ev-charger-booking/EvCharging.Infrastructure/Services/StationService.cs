@@ -9,13 +9,13 @@ public class StationService : IStationService
 {
     private readonly IRepository<Station> _stations;
     private readonly IRepository<Booking> _bookings;
-    private readonly IRepository<StationSchedule> _schedules;
 
-    public StationService(IRepository<Station> stations, IRepository<Booking> bookings, IRepository<StationSchedule> schedules)
+
+    public StationService(IRepository<Station> stations, IRepository<Booking> bookings)
     {
         _stations = stations;
         _bookings = bookings;
-        _schedules = schedules;
+    
     }
 
     public async Task<StationResponse> CreateAsync(CreateStationRequest req)
@@ -29,7 +29,8 @@ public class StationService : IStationService
             Longitude = req.Longitude,
             Type = req.Type,
             Slots = req.Slots,
-            IsActive = true
+            IsActive = true,
+            AssignedOperator = req.AssignedOperator // assign operator if provided
         };
 
         await _stations.InsertAsync(entity);
@@ -70,56 +71,21 @@ public class StationService : IStationService
         entity.Type = req.Type;
         entity.Slots = req.Slots;
         entity.IsActive = req.IsActive;
+        entity.AssignedOperator = req.AssignedOperator; // update assigned operator 
         entity.UpdatedAt = DateTime.UtcNow;
 
         await _stations.UpdateAsync(entity.Id, entity);
     }
 
-    public async Task<List<StationWithSchedulesResponse>> GetAllWithSchedulesAsync(DateOnly? date = null)
+    public async Task<StationResponse?> GetByAssignedOperatorAsync(string? assignedOperator)
     {
-        var stations = await _stations.GetAllAsync();
-        var result = new List<StationWithSchedulesResponse>();
+        if (string.IsNullOrEmpty(assignedOperator))
+            return null;
 
-        foreach (var station in stations)
-        {
-            var schedules = new List<ScheduleResponse>();
-            
-            if (date.HasValue)
-            {
-                // Get schedules for specific date
-                var stationSchedules = await _schedules.FindAsync(s => s.StationId == station.Id && s.Date == date.Value);
-                schedules = stationSchedules.Select(MapSchedule).ToList();
-            }
-            else
-            {
-                // Get all schedules for the station (next 7 days)
-                var today = DateOnly.FromDateTime(DateTime.UtcNow);
-                var futureDate = today.AddDays(7);
-                var stationSchedules = await _schedules.FindAsync(s => s.StationId == station.Id && s.Date >= today && s.Date <= futureDate);
-                schedules = stationSchedules.Select(MapSchedule).ToList();
-            }
-
-            var stationWithSchedules = new StationWithSchedulesResponse(
-                station.Id, 
-                station.Name, 
-                station.Address, 
-                station.Latitude, 
-                station.Longitude, 
-                station.Type, 
-                station.Slots, 
-                station.IsActive, 
-                schedules
-            );
-
-            result.Add(stationWithSchedules);
-        }
-
-        return result;
+        var stations = await _stations.FindAsync(s => s.AssignedOperator == assignedOperator);
+        var station = stations.FirstOrDefault();
+        return station is null ? null : Map(station);
     }
-
     private static StationResponse Map(Station e)
-        => new(e.Id, e.Name, e.Address, e.Latitude, e.Longitude, e.Type, e.Slots, e.IsActive);
-
-    private static ScheduleResponse MapSchedule(StationSchedule e)
-        => new(e.Id, e.StationId, e.Date, e.Slots);
+        => new(e.Id, e.Name, e.Address, e.Latitude, e.Longitude, e.Type, e.Slots, e.IsActive, e.AssignedOperator); // include AssignedOperator in response
 }
