@@ -10,7 +10,6 @@ public class StationService : IStationService
     private readonly IRepository<Station> _stations;
     private readonly IRepository<Booking> _bookings;
 
-
     public StationService(IRepository<Station> stations, IRepository<Booking> bookings)
     {
         _stations = stations;

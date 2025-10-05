@@ -37,12 +37,6 @@ public class StationsController : ControllerBase
         return Ok(await _stations.GetAllAsync());
     }
 
-    [HttpGet("with-schedules")]
-    [Authorize]
-    public async Task<ActionResult<List<StationWithSchedulesResponse>>> GetAllWithSchedules([FromQuery] DateOnly? date = null)
-        => Ok(await _stations.GetAllWithSchedulesAsync(date));
-
-
     [HttpGet("{id}")]
     [Authorize]
     public async Task<ActionResult<StationResponse>> GetById(string id)
