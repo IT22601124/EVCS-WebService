@@ -11,4 +11,7 @@ public class User : EntityBase
     public string PasswordHash { get; set; } = default!;
     public string Role { get; set; } = Roles.Backoffice; // Backoffice | Operator
     public bool IsActive { get; set; } = true;
+
+    // Operator assignment (nullable). One operator -> one station
+    public string? AssignedStationId { get; set; }
 }

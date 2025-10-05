@@ -53,4 +53,12 @@ public class StationsController : ControllerBase
         await _stations.UpdateAsync(id, req);
         return NoContent();
     }
+
+    [HttpGet("{id}/operators")]
+    [Authorize(Roles = Roles.Backoffice + "," + Roles.Operator)]
+    public async Task<ActionResult<List<UserResponse>>> GetOperatorsForStation(
+        [FromServices] IUserService users,
+        string id)
+        => Ok(await users.GetOperatorsByStationAsync(id));
+
 }

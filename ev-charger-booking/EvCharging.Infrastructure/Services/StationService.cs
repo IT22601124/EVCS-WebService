@@ -75,15 +75,12 @@ public class StationService : IStationService
         await _stations.UpdateAsync(entity.Id, entity);
     }
 
-    public async Task<StationResponse?> GetByAssignedOperatorAsync(string? assignedOperator)
+    public async Task<List<StationResponse>> GetByAssignedOperatorAsync(string assignedOperator)
     {
-        if (string.IsNullOrEmpty(assignedOperator))
-            return null;
-
-        var stations = await _stations.FindAsync(s => s.AssignedOperator == assignedOperator);
-        var station = stations.FirstOrDefault();
-        return station is null ? null : Map(station);
+        var list = await _stations.FindAsync(s => s.AssignedOperator == assignedOperator);
+        return list.Select(Map).ToList();
     }
+    
     private static StationResponse Map(Station e)
         => new(e.Id, e.Name, e.Address, e.Latitude, e.Longitude, e.Type, e.Slots, e.IsActive, e.AssignedOperator); // include AssignedOperator in response
 }
