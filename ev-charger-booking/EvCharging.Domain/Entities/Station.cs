@@ -13,4 +13,7 @@ public class Station : EntityBase
     public string Type { get; set; } = "AC"; // AC | DC
     public int Slots { get; set; }
     public bool IsActive { get; set; } = true;
+
+    // Assigned Operator username (optional)
+    public string? AssignedOperator { get; set; }
 }

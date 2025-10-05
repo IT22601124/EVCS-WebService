@@ -23,8 +23,19 @@ public class StationsController : ControllerBase
     [HttpGet]
     [Authorize]
     public async Task<ActionResult<List<StationResponse>>> GetAll()
-        => Ok(await _stations.GetAllAsync());
+    {
+        var role = User.FindFirst("role")?.Value;
+        var username = User.Identity?.Name;
 
+        if (role == Roles.Operator && !string.IsNullOrEmpty(username))
+        {
+            var items = await _stations.GetByAssignedOperatorAsync(username);
+            return Ok(items);
+        }
+
+        // Backoffice sees all
+        return Ok(await _stations.GetAllAsync());
+    }
 
     [HttpGet("with-schedules")]
     [Authorize]
