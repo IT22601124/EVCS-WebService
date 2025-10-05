@@ -1,8 +1,4 @@
-using EvCharging.Domain.Entities;
-
 namespace EvCharging.Application.DTOs;
-
-
 
 
 public record CreateStationRequest(string Name, string Address, double Latitude, double Longitude, string Type, int Slots, string? AssignedOperator = null); // allow assigning operator when creating

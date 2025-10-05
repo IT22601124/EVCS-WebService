@@ -11,33 +11,12 @@ namespace EvCharging.Api.Controllers;
 public class BookingsController : ControllerBase
 {
     private readonly IBookingService _bookings;
-    private readonly ILogger<BookingsController> _logger;
-    
-    public BookingsController(IBookingService bookings, ILogger<BookingsController> logger) 
-    { 
-        _bookings = bookings; 
-        _logger = logger;
-    }
+    public BookingsController(IBookingService bookings) { _bookings = bookings; }
 
     [HttpPost]
     [Authorize] // owner creates, but also allow backoffice
     public async Task<ActionResult<BookingResponse>> Create([FromBody] CreateBookingRequest req)
-    {
-        _logger.LogInformation("📥 Booking request received: NIC={Nic}, StationId={StationId}, Date={Date}, Start={Start}, End={End}", 
-            req.Nic, req.StationId, req.Date, req.Start, req.End);
-            
-        try
-        {
-            var result = await _bookings.CreateAsync(req);
-            _logger.LogInformation("✅ Booking created successfully: ID={BookingId}", result.Id);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "❌ Booking creation failed: {Message}", ex.Message);
-            return BadRequest(new { error = ex.Message });
-        }
-    }
+        => Ok(await _bookings.CreateAsync(req));
 
     [HttpGet("{id}")]
     [Authorize]

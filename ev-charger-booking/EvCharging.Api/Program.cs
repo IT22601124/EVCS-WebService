@@ -26,8 +26,7 @@ ConventionRegistry.Register("EVCS.IgnoreExtraElements", ignoreExtras, _ => true)
 // Serilog
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
-    .WriteTo.File("logs/api-.log", rollingInterval: RollingInterval.Day)
-    .MinimumLevel.Information()
+    
     .CreateLogger();
 builder.Host.UseSerilog();
 
@@ -99,12 +98,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseSerilogRequestLogging(configure =>
-{
-    configure.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
-    configure.IncludeQueryInRequestPath = true;
-});
-// app.UseHttpsRedirection(); // Commented out for local testing with HTTP
+app.UseSerilogRequestLogging();
+app.UseHttpsRedirection();
 app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
@@ -112,7 +107,7 @@ app.MapControllers();
 
 // Seed admin user + ensure Mongo indexes
 await SeedAsync(app.Services);
-// await EnsureIndexesAsync(app.Services); // Temporarily disabled due to serialization conflicts
+await EnsureIndexesAsync(app.Services);
 
 app.Run();
 
@@ -132,20 +127,16 @@ static async Task SeedAsync(IServiceProvider services)
             Username = "admin",
             PasswordHash = EvCharging.Infrastructure.Security.PasswordHasher.Hash("Admin@123"),
             Role = EvCharging.Domain.Enums.Roles.Backoffice,
-            IsActive = true,
-            Nic = "000000000V",
-            FullName = "System Administrator",
-            Email = "admin@evcharging.com",
-            Phone = "+94701234567"
+            IsActive = true
         };
         await users.InsertAsync(user);
         Console.WriteLine("Seeded default admin user: admin / Admin@123");
     }
 }
 
-// static async Task EnsureIndexesAsync(IServiceProvider services)
-// {
-//     using var scope = services.CreateScope();
-//     var ctx = scope.ServiceProvider.GetRequiredService<MongoDbContext>();
-//     await EvCharging.Infrastructure.Persistence.IndexInitializer.EnsureIndexesAsync(ctx);
-// }
+static async Task EnsureIndexesAsync(IServiceProvider services)
+{
+    using var scope = services.CreateScope();
+    var ctx = scope.ServiceProvider.GetRequiredService<MongoDbContext>();
+    await EvCharging.Infrastructure.Persistence.IndexInitializer.EnsureIndexesAsync(ctx);
+}

@@ -4,7 +4,7 @@ namespace EvCharging.Application.Contracts;
 
 public interface IAuthService
 {
-    Task<LoginResponse> LoginAsync(string username, string password);
+    Task<(string token, DateTime expiresAt, string role)> LoginAsync(string username, string password);
 }
 
 public interface IOwnerService
