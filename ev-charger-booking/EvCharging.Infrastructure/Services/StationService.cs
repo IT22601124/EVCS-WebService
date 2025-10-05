@@ -27,7 +27,8 @@ public class StationService : IStationService
             Longitude = req.Longitude,
             Type = req.Type,
             Slots = req.Slots,
-            IsActive = true
+            IsActive = true,
+            AssignedOperator = req.AssignedOperator // assign operator if provided
         };
 
         await _stations.InsertAsync(entity);
@@ -68,11 +69,21 @@ public class StationService : IStationService
         entity.Type = req.Type;
         entity.Slots = req.Slots;
         entity.IsActive = req.IsActive;
+        entity.AssignedOperator = req.AssignedOperator; // update assigned operator 
         entity.UpdatedAt = DateTime.UtcNow;
 
         await _stations.UpdateAsync(entity.Id, entity);
     }
 
+    public async Task<StationResponse?> GetByAssignedOperatorAsync(string? assignedOperator)
+    {
+        if (string.IsNullOrEmpty(assignedOperator))
+            return null;
+
+        var stations = await _stations.FindAsync(s => s.AssignedOperator == assignedOperator);
+        var station = stations.FirstOrDefault();
+        return station is null ? null : Map(station);
+    }
     private static StationResponse Map(Station e)
-        => new(e.Id, e.Name, e.Address, e.Latitude, e.Longitude, e.Type, e.Slots, e.IsActive);
+        => new(e.Id, e.Name, e.Address, e.Latitude, e.Longitude, e.Type, e.Slots, e.IsActive, e.AssignedOperator); // include AssignedOperator in response
 }

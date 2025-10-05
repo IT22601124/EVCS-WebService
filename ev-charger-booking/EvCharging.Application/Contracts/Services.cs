@@ -21,6 +21,7 @@ public interface IStationService
     Task<List<StationResponse>> GetAllAsync();
     Task<StationResponse?> GetByIdAsync(string id);
     Task UpdateAsync(string id, UpdateStationRequest req);
+    Task<StationResponse?> GetByAssignedOperatorAsync(string? assignedOperator);
 }
 
 public interface IScheduleService
