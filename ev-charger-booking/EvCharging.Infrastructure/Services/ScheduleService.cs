@@ -9,9 +9,14 @@ namespace EvCharging.Infrastructure.Services;
 public class ScheduleService : IScheduleService
 {
     private readonly IRepository<StationSchedule> _schedules;
+    private readonly IRepository<Station> _stations;
 
 
-    public ScheduleService(IRepository<StationSchedule> schedules) { _schedules = schedules; }
+    public ScheduleService(IRepository<StationSchedule> schedules, IRepository<Station> stations) 
+    { 
+        _schedules = schedules;
+        _stations = stations;
+    }
 
 
     public async Task<ScheduleResponse> UpsertAsync(UpsertScheduleRequest req)
@@ -41,6 +46,25 @@ public class ScheduleService : IScheduleService
 
     public Task<List<ScheduleResponse>> GetByStationAndDateAsync(string stationId, DateOnly date)
         => GetByFilterAsync(s => s.StationId == stationId && s.Date == date);
+
+    public Task<List<ScheduleResponse>> GetAllAsync()
+        => GetByFilterAsync(_ => true);
+
+    public async Task<List<ScheduleWithStationResponse>> GetAllWithStationsAsync()
+    {
+        var schedules = await _schedules.FindAsync(_ => true);
+        var stationIds = schedules.Select(s => s.StationId).Distinct().ToList();
+        var stations = await _stations.FindAsync(st => stationIds.Contains(st.Id));
+        var stationDict = stations.ToDictionary(st => st.Id, st => new StationResponse(st.Id, st.Name, st.Address, st.Latitude, st.Longitude, st.Type, st.Slots, st.IsActive));
+
+        return schedules.Select(s => new ScheduleWithStationResponse(
+            s.Id, 
+            s.StationId, 
+            s.Date, 
+            s.Slots, 
+            stationDict.TryGetValue(s.StationId, out var station) ? station : null
+        )).ToList();
+    }
 
 
     private async Task<List<ScheduleResponse>> GetByFilterAsync(System.Linq.Expressions.Expression<Func<StationSchedule,bool>> filter)

@@ -75,6 +75,21 @@ public class StationService : IStationService
         await _stations.UpdateAsync(entity.Id, entity);
     }
 
+    public async Task DeleteAsync(string id)
+    {
+        var entity = await _stations.GetByIdAsync(id) ?? throw new KeyNotFoundException("Station not found");
+        
+        // Business rule: prevent deletion if there are active bookings
+        var activeBookings = await _bookings.FindAsync(b =>
+            b.StationId == id &&
+            (b.Status == BookingStatus.Pending || b.Status == BookingStatus.Approved));
+
+        if (activeBookings.Any())
+            throw new InvalidOperationException("Cannot delete station with active bookings");
+
+        await _stations.DeleteAsync(id);
+    }
+
     public async Task<List<StationWithSchedulesResponse>> GetAllWithSchedulesAsync(DateOnly? date = null)
     {
         var stations = await _stations.GetAllAsync();
@@ -98,6 +113,60 @@ public class StationService : IStationService
                 var stationSchedules = await _schedules.FindAsync(s => s.StationId == station.Id && s.Date >= today && s.Date <= futureDate);
                 schedules = stationSchedules.Select(MapSchedule).ToList();
             }
+
+            var stationWithSchedules = new StationWithSchedulesResponse(
+                station.Id, 
+                station.Name, 
+                station.Address, 
+                station.Latitude, 
+                station.Longitude, 
+                station.Type, 
+                station.Slots, 
+                station.IsActive, 
+                schedules
+            );
+
+            result.Add(stationWithSchedules);
+        }
+
+        return result;
+    }
+
+    public async Task<List<StationWithSchedulesResponse>> GetAllWithWeeklySchedulesAsync(DateOnly? startDate = null)
+    {
+        // Use provided start date or default to today (first day of the week)
+        var weekStart = startDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var weekEnd = weekStart.AddDays(6); // 7 days total (0-6)
+
+        var stations = await _stations.GetAllAsync();
+        
+        // Debug: Log what we got from database
+        Console.WriteLine($"=== DEBUG: Found {stations.Count} stations from database ===");
+        foreach (var station in stations)
+        {
+            Console.WriteLine($"Station ID: {station.Id}");
+            Console.WriteLine($"Name: '{station.Name}' (null: {station.Name == null})");
+            Console.WriteLine($"Address: '{station.Address}' (null: {station.Address == null})");
+            Console.WriteLine($"Type: '{station.Type}'");
+            Console.WriteLine($"Slots: {station.Slots}");
+            Console.WriteLine($"IsActive: {station.IsActive}");
+            Console.WriteLine("---");
+        }
+        
+        var result = new List<StationWithSchedulesResponse>();
+
+        foreach (var station in stations)
+        {
+            // Get all schedules for this station within the week range
+            var stationSchedules = await _schedules.FindAsync(s => 
+                s.StationId == station.Id && 
+                s.Date >= weekStart && 
+                s.Date <= weekEnd);
+            
+            var schedules = stationSchedules
+                .OrderBy(s => s.Date)
+                .Select(MapSchedule)
+                .ToList();
 
             var stationWithSchedules = new StationWithSchedulesResponse(
                 station.Id, 

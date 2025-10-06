@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using EvCharging.Application.Contracts;
 using EvCharging.Application.DTOs;
 using EvCharging.Domain.Enums;
+using System.Text.Json;
 
 namespace EvCharging.Api.Controllers;
 
@@ -11,7 +12,13 @@ namespace EvCharging.Api.Controllers;
 public class StationsController : ControllerBase
 {
     private readonly IStationService _stations;
-    public StationsController(IStationService stations) { _stations = stations; }
+    private readonly ILogger<StationsController> _logger;
+    
+    public StationsController(IStationService stations, ILogger<StationsController> logger) 
+    { 
+        _stations = stations;
+        _logger = logger;
+    }
 
 
     [HttpPost]
@@ -21,19 +28,42 @@ public class StationsController : ControllerBase
 
 
     [HttpGet]
-    [Authorize]
+    [Authorize(Roles = $"{Roles.Backoffice},{Roles.Operator},{Roles.Owner}")]
     public async Task<ActionResult<List<StationResponse>>> GetAll()
         => Ok(await _stations.GetAllAsync());
 
 
     [HttpGet("with-schedules")]
-    [Authorize]
+    [Authorize(Roles = $"{Roles.Backoffice},{Roles.Operator},{Roles.Owner}")]
     public async Task<ActionResult<List<StationWithSchedulesResponse>>> GetAllWithSchedules([FromQuery] DateOnly? date = null)
         => Ok(await _stations.GetAllWithSchedulesAsync(date));
 
 
+    [HttpGet("with-weekly-schedules")]
+    [Authorize(Roles = $"{Roles.Backoffice},{Roles.Operator},{Roles.Owner}")]
+    public async Task<ActionResult<List<StationWithSchedulesResponse>>> GetAllWithWeeklySchedules([FromQuery] DateOnly? startDate = null)
+    {
+        var result = await _stations.GetAllWithWeeklySchedulesAsync(startDate);
+        
+        // Print the response to console
+        var responseJson = JsonSerializer.Serialize(result, new JsonSerializerOptions 
+        { 
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+        
+        Console.WriteLine("=== WEEKLY SCHEDULES RESPONSE ===");
+        Console.WriteLine(responseJson);
+        Console.WriteLine("=== END RESPONSE ===");
+        
+        _logger.LogInformation("Weekly schedules response: {Response}", responseJson);
+        
+        return Ok(result);
+    }
+
+
     [HttpGet("{id}")]
-    [Authorize]
+    [Authorize(Roles = $"{Roles.Backoffice},{Roles.Operator},{Roles.Owner}")]
     public async Task<ActionResult<StationResponse>> GetById(string id)
     {
         var item = await _stations.GetByIdAsync(id);
@@ -46,6 +76,18 @@ public class StationsController : ControllerBase
     public async Task<IActionResult> Update(string id, [FromBody] UpdateStationRequest req)
     {
         await _stations.UpdateAsync(id, req);
+        return NoContent();
+    }
+
+    [HttpDelete("{id}")]
+    [Authorize(Roles = $"{Roles.Backoffice},{Roles.Operator}")]
+    public async Task<IActionResult> Delete(string id)
+    {
+        var station = await _stations.GetByIdAsync(id);
+        if (station == null)
+            return NotFound();
+            
+        await _stations.DeleteAsync(id);
         return NoContent();
     }
 }

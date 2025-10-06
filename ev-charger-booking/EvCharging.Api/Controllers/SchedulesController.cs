@@ -8,7 +8,7 @@ namespace EvCharging.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = Roles.Backoffice + "," + Roles.Operator)] // tightened access
+[Authorize(Roles = Roles.Backoffice + "," + Roles.Operator + "," + Roles.Owner)]
 public class SchedulesController : ControllerBase
 {
     private readonly IScheduleService _schedules;
@@ -22,4 +22,16 @@ public class SchedulesController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<List<ScheduleResponse>>> Get(string stationId, DateOnly date)
         => Ok(await _schedules.GetByStationAndDateAsync(stationId, date));
+
+    [HttpGet("all")]
+    public async Task<ActionResult<List<ScheduleResponse>>> GetAll()
+    {
+        // Get all schedules from all stations
+        var allSchedules = await _schedules.GetAllAsync();
+        return Ok(allSchedules);
+    }
+
+    [HttpGet("with-stations")]
+    public async Task<ActionResult<List<ScheduleWithStationResponse>>> GetAllWithStations()
+        => Ok(await _schedules.GetAllWithStationsAsync());
 }
