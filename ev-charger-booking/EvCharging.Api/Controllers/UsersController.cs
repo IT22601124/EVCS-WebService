@@ -9,7 +9,7 @@ namespace EvCharging.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = Roles.Backoffice)]
+[Authorize]
 public class UsersController : ControllerBase
 {
     private readonly IUserService _users;
@@ -39,11 +39,19 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> Update(string username, [FromBody] UpdateUserRequest req)
     { await _users.UpdateAsync(username, req); return NoContent(); }
 
+    // body-based assign
     [HttpPost("{username}/assign")]
     [Authorize(Roles = Roles.Backoffice)]
     public async Task<ActionResult<UserResponse>> AssignToStation(string username, [FromBody] AssignStationRequest req)
         => Ok(await _users.AssignToStationAsync(username, req.StationId));
 
+    // route-based assign so frontend can call /assign/{stationId}
+    [HttpPost("{username}/assign/{stationId}")]
+    [Authorize(Roles = Roles.Backoffice)]
+    public async Task<ActionResult<UserResponse>> AssignToStationViaRoute(string username, string stationId)
+        => Ok(await _users.AssignToStationAsync(username, stationId));
+
+    // unassign
     [HttpPost("{username}/unassign")]
     [Authorize(Roles = Roles.Backoffice)]
     public async Task<ActionResult<UserResponse>> UnassignFromStation(string username)
@@ -60,8 +68,8 @@ public class UsersController : ControllerBase
     public async Task<ActionResult<UserResponse>> Me()
     {
         var username = User.FindFirstValue(ClaimTypes.Name)
-                       ?? User.FindFirstValue("username")
-                       ?? User.Identity?.Name;
+                    ?? User.FindFirstValue("username")
+                    ?? User.Identity?.Name;
 
         if (string.IsNullOrWhiteSpace(username))
             return Unauthorized();
@@ -69,6 +77,7 @@ public class UsersController : ControllerBase
         var me = await _users.GetCurrentAsync(username);
         return me is null ? NotFound() : Ok(me);
     }
+
 }
 
 public record AssignStationRequest(string StationId);

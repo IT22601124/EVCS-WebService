@@ -28,7 +28,8 @@ public class StationService : IStationService
             Type = req.Type,
             Slots = req.Slots,
             IsActive = true,
-            AssignedOperator = req.AssignedOperator // assign operator if provided
+            AssignedOperators = new List<string>() // new stations start with no operators
+
         };
 
         await _stations.InsertAsync(entity);
@@ -69,18 +70,21 @@ public class StationService : IStationService
         entity.Type = req.Type;
         entity.Slots = req.Slots;
         entity.IsActive = req.IsActive;
-        entity.AssignedOperator = req.AssignedOperator; // update assigned operator 
         entity.UpdatedAt = DateTime.UtcNow;
 
         await _stations.UpdateAsync(entity.Id, entity);
     }
 
-    public async Task<List<StationResponse>> GetByAssignedOperatorAsync(string assignedOperator)
-    {
-        var list = await _stations.FindAsync(s => s.AssignedOperator == assignedOperator);
-        return list.Select(Map).ToList();
-    }
+        // Key logic: filter by operator username
+        public async Task<List<StationResponse>> GetByAssignedOperatorAsync(string operatorUsername)
+        {
+            var list = await _stations.FindAsync(s =>
+                s.AssignedOperators.Contains(operatorUsername)
+            );
+
+            return list.Select(Map).ToList();
+        }
     
     private static StationResponse Map(Station e)
-        => new(e.Id, e.Name, e.Address, e.Latitude, e.Longitude, e.Type, e.Slots, e.IsActive, e.AssignedOperator); // include AssignedOperator in response
+        => new(e.Id, e.Name, e.Address, e.Latitude, e.Longitude, e.Type, e.Slots, e.IsActive, e.AssignedOperators); // include AssignedOperators in response
 }

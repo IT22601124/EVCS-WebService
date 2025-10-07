@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using EvCharging.Application.Contracts;
 using EvCharging.Application.DTOs;
 using EvCharging.Domain.Enums;
+using System.Security.Claims;
 
 namespace EvCharging.Api.Controllers;
 
@@ -22,15 +23,22 @@ public class StationsController : ControllerBase
 
     [HttpGet]
     [Authorize]
-    public async Task<ActionResult<List<StationResponse>>> GetAll()
+    public async Task<ActionResult<List<StationResponse>>> GetAll([FromServices] IUserService users)
     {
-        var role = User.FindFirst("role")?.Value;
-        var username = User.Identity?.Name;
+        var role = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
+        var username = User.FindFirst(ClaimTypes.Name)?.Value ?? User.Identity?.Name;
 
-        if (role == Roles.Operator && !string.IsNullOrEmpty(username))
+        // If Operator, return ONLY their assigned station (if any)
+        if (role == Roles.Operator && !string.IsNullOrWhiteSpace(username))
         {
-            var items = await _stations.GetByAssignedOperatorAsync(username);
-            return Ok(items);
+            var me = await users.GetCurrentAsync(username); // includes AssignedStationId
+            if (me?.AssignedStationId is string sid && !string.IsNullOrWhiteSpace(sid))
+            {
+                var st = await _stations.GetByIdAsync(sid);
+                // if not found, return empty list to front-end
+                return Ok(st is null ? new List<StationResponse>() : new List<StationResponse> { st });
+            }
+            return Ok(new List<StationResponse>()); // no assignment
         }
 
         // Backoffice sees all
