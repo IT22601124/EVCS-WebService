@@ -53,17 +53,44 @@ public class ScheduleService : IScheduleService
     public async Task<List<ScheduleWithStationResponse>> GetAllWithStationsAsync()
     {
         var schedules = await _schedules.FindAsync(_ => true);
-        var stationIds = schedules.Select(s => s.StationId).Distinct().ToList();
+        
+        // Filter out schedules with null or empty StationId
+        var validSchedules = schedules.Where(s => !string.IsNullOrEmpty(s.StationId)).ToList();
+        
+        if (!validSchedules.Any())
+        {
+            return new List<ScheduleWithStationResponse>();
+        }
+        
+        var stationIds = validSchedules.Select(s => s.StationId).Distinct().ToList();
         var stations = await _stations.FindAsync(st => stationIds.Contains(st.Id));
         var stationDict = stations.ToDictionary(st => st.Id, st => new StationResponse(st.Id, st.Name, st.Address, st.Latitude, st.Longitude, st.Type, st.Slots, st.IsActive));
 
-        return schedules.Select(s => new ScheduleWithStationResponse(
-            s.Id, 
-            s.StationId, 
-            s.Date, 
-            s.Slots, 
-            stationDict.TryGetValue(s.StationId, out var station) ? station : null
-        )).ToList();
+        return validSchedules
+            .Where(s => !string.IsNullOrEmpty(s.StationId)) // Double-check for safety
+            .Select(s => new ScheduleWithStationResponse(
+                s.Id, 
+                s.StationId, 
+                s.Date, 
+                s.Slots, 
+                stationDict.TryGetValue(s.StationId, out var station) ? station : null
+            ))
+            .Where(sr => sr.Station != null) // Only return schedules with valid stations
+            .ToList();
+    }
+
+    public async Task<int> CleanupInvalidSchedulesAsync()
+    {
+        var invalidSchedules = await _schedules.FindAsync(s => string.IsNullOrEmpty(s.StationId));
+        int deletedCount = 0;
+        
+        foreach (var schedule in invalidSchedules)
+        {
+            await _schedules.DeleteAsync(schedule.Id);
+            deletedCount++;
+        }
+        
+        return deletedCount;
     }
 
 

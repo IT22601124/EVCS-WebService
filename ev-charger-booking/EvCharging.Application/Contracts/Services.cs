@@ -32,6 +32,7 @@ public interface IScheduleService
     Task<List<ScheduleResponse>> GetByStationAndDateAsync(string stationId, DateOnly date);
     Task<List<ScheduleResponse>> GetAllAsync();
     Task<List<ScheduleWithStationResponse>> GetAllWithStationsAsync();
+    Task<int> CleanupInvalidSchedulesAsync();
 }
 
 public interface IBookingService

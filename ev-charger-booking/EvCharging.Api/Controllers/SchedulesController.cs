@@ -34,4 +34,12 @@ public class SchedulesController : ControllerBase
     [HttpGet("with-stations")]
     public async Task<ActionResult<List<ScheduleWithStationResponse>>> GetAllWithStations()
         => Ok(await _schedules.GetAllWithStationsAsync());
+
+    [HttpDelete("cleanup")]
+    [Authorize(Roles = Roles.Backoffice)] // Only Backoffice can cleanup
+    public async Task<ActionResult<object>> CleanupInvalidSchedules()
+    {
+        var deletedCount = await _schedules.CleanupInvalidSchedulesAsync();
+        return Ok(new { message = $"Deleted {deletedCount} invalid schedules with null StationId" });
+    }
 }
