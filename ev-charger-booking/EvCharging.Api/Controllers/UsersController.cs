@@ -9,23 +9,26 @@ namespace EvCharging.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = Roles.Backoffice)]
+[Authorize] // require authentication for the controller; restrict specific actions by role below
 public class UsersController : ControllerBase
 {
     private readonly IUserService _users;
 
     public UsersController(IUserService users) { _users = users; }
 
+    // Admin only
     [HttpPost]
     [Authorize(Roles = Roles.Backoffice)]
     public async Task<ActionResult<UserResponse>> Create([FromBody] CreateUserRequest req)
         => Ok(await _users.CreateAsync(req));
 
+    // Admin only
     [HttpGet]
     [Authorize(Roles = Roles.Backoffice)]
     public async Task<ActionResult<List<UserResponse>>> GetAll()
         => Ok(await _users.GetAllAsync());
 
+    // Admin only: keep this restricted to Backoffice
     [HttpGet("{username}")]
     [Authorize(Roles = Roles.Backoffice)]
     public async Task<ActionResult<UserResponse>> GetByUsername(string username)
@@ -34,33 +37,42 @@ public class UsersController : ControllerBase
         return u is null ? NotFound() : Ok(u);
     }
 
+    // Admin only
     [HttpPut("{username}")]
     [Authorize(Roles = Roles.Backoffice)]
     public async Task<IActionResult> Update(string username, [FromBody] UpdateUserRequest req)
-    { await _users.UpdateAsync(username, req); return NoContent(); }
+    {
+        await _users.UpdateAsync(username, req);
+        return NoContent();
+    }
 
+    // Admin only
     [HttpPost("{username}/assign")]
     [Authorize(Roles = Roles.Backoffice)]
     public async Task<ActionResult<UserResponse>> AssignToStation(string username, [FromBody] AssignStationRequest req)
         => Ok(await _users.AssignToStationAsync(username, req.StationId));
 
+    // Admin only
     [HttpPost("{username}/unassign")]
     [Authorize(Roles = Roles.Backoffice)]
     public async Task<ActionResult<UserResponse>> UnassignFromStation(string username)
         => Ok(await _users.UnassignFromStationAsync(username));
 
+    // Admin only
     [HttpGet("operators/by-station/{stationId}")]
     [Authorize(Roles = Roles.Backoffice)]
     public async Task<ActionResult<List<UserResponse>>> GetOperatorsByStation(string stationId)
         => Ok(await _users.GetOperatorsByStationAsync(stationId));
 
-    // Lets Operator fetch their own assignment without Backoffice role
+    // Lets any authenticated user fetch their own assignment/profile
     [HttpGet("me")]
-    [Authorize]
+    [Authorize] // authenticated users (no Backoffice role required)
     public async Task<ActionResult<UserResponse>> Me()
     {
+        // Try common claim names. Adjust if your tokens use different names.
         var username = User.FindFirstValue(ClaimTypes.Name)
                        ?? User.FindFirstValue("username")
+                       ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
                        ?? User.Identity?.Name;
 
         if (string.IsNullOrWhiteSpace(username))
@@ -72,4 +84,3 @@ public class UsersController : ControllerBase
 }
 
 public record AssignStationRequest(string StationId);
-
