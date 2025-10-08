@@ -29,7 +29,9 @@ public class StationService : IStationService
             Longitude = req.Longitude,
             Type = req.Type,
             Slots = req.Slots,
-            IsActive = true
+            IsActive = true,
+            AssignedOperators = new List<string>() // new stations start with no operators
+
         };
 
         await _stations.InsertAsync(entity);
@@ -75,6 +77,16 @@ public class StationService : IStationService
         await _stations.UpdateAsync(entity.Id, entity);
     }
 
+        // Key logic: filter by operator username
+        public async Task<List<StationResponse>> GetByAssignedOperatorAsync(string operatorUsername)
+        {
+            var list = await _stations.FindAsync(s =>
+                s.AssignedOperators.Contains(operatorUsername)
+            );
+
+            return list.Select(Map).ToList();
+        }
+    
     public async Task DeleteAsync(string id)
     {
         var entity = await _stations.GetByIdAsync(id) ?? throw new KeyNotFoundException("Station not found");
@@ -187,7 +199,7 @@ public class StationService : IStationService
     }
 
     private static StationResponse Map(Station e)
-        => new(e.Id, e.Name, e.Address, e.Latitude, e.Longitude, e.Type, e.Slots, e.IsActive);
+        => new(e.Id, e.Name, e.Address, e.Latitude, e.Longitude, e.Type, e.Slots, e.IsActive, e.AssignedOperators); // include AssignedOperators in response
 
     private static ScheduleResponse MapSchedule(StationSchedule e)
         => new(e.Id, e.StationId, e.Date, e.Slots);

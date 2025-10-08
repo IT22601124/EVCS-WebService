@@ -14,7 +14,8 @@ public class StationServiceTests
     {
         var stationRepo = new InMemoryRepository<Station>();
         var bookingRepo = new InMemoryRepository<Booking>();
-        var svc = new StationService(stationRepo, bookingRepo);
+        var scheduleRepo = new InMemoryRepository<StationSchedule>();
+        var svc = new StationService(stationRepo, bookingRepo, scheduleRepo);
 
         var st = new Station
         {
@@ -41,7 +42,8 @@ public class StationServiceTests
     {
         var stationRepo = new InMemoryRepository<Station>();
         var bookingRepo = new InMemoryRepository<Booking>();
-        var svc = new StationService(stationRepo, bookingRepo);
+        var scheduleRepo = new InMemoryRepository<StationSchedule>();
+        var svc = new StationService(stationRepo, bookingRepo, scheduleRepo);
 
         var st = new Station
         {

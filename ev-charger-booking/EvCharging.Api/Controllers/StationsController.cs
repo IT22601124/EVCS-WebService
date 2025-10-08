@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using EvCharging.Application.Contracts;
 using EvCharging.Application.DTOs;
 using EvCharging.Domain.Enums;
+using System.Security.Claims;
 using System.Text.Json;
 
 namespace EvCharging.Api.Controllers;
@@ -29,9 +30,27 @@ public class StationsController : ControllerBase
 
     [HttpGet]
     [Authorize(Roles = $"{Roles.Backoffice},{Roles.Operator},{Roles.Owner}")]
-    public async Task<ActionResult<List<StationResponse>>> GetAll()
-        => Ok(await _stations.GetAllAsync());
+    public async Task<ActionResult<List<StationResponse>>> GetAll([FromServices] IUserService users)
+    {
+        var role = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
+        var username = User.FindFirst(ClaimTypes.Name)?.Value ?? User.Identity?.Name;
 
+        // If Operator, return ONLY their assigned station (if any)
+        if (role == Roles.Operator && !string.IsNullOrWhiteSpace(username))
+        {
+            var me = await users.GetCurrentAsync(username); // includes AssignedStationId
+            if (me?.AssignedStationId is string sid && !string.IsNullOrWhiteSpace(sid))
+            {
+                var st = await _stations.GetByIdAsync(sid);
+                // if not found, return empty list to front-end
+                return Ok(st is null ? new List<StationResponse>() : new List<StationResponse> { st });
+            }
+            return Ok(new List<StationResponse>()); // no assignment
+        }
+
+        // Backoffice sees all
+        return Ok(await _stations.GetAllAsync());
+    }
 
     [HttpGet("with-schedules")]
     [Authorize(Roles = $"{Roles.Backoffice},{Roles.Operator},{Roles.Owner}")]
@@ -78,6 +97,14 @@ public class StationsController : ControllerBase
         await _stations.UpdateAsync(id, req);
         return NoContent();
     }
+
+    [HttpGet("{id}/operators")]
+    [Authorize(Roles = Roles.Backoffice + "," + Roles.Operator)]
+    public async Task<ActionResult<List<UserResponse>>> GetOperatorsForStation(
+        [FromServices] IUserService users,
+        string id)
+        => Ok(await users.GetOperatorsByStationAsync(id));
+
 
     [HttpDelete("{id}")]
     [Authorize(Roles = $"{Roles.Backoffice},{Roles.Operator}")]

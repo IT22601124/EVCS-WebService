@@ -11,17 +11,19 @@ namespace EvCharging.Infrastructure.Services;
 public class AuthService : IAuthService
 {
     private readonly IRepository<User> _users;
+    private readonly IRepository<Station> _stations;
     private readonly IRepository<EvOwner> _owners;
     private readonly JwtTokenService _jwt;
 
 
-    public AuthService(IRepository<User> users, IRepository<EvOwner> owners, JwtTokenService jwt)
+    public AuthService(IRepository<User> users, IRepository<Station> stations, IRepository<EvOwner> owners, JwtTokenService jwt)
     {
-        _users = users; 
+        _users = users;
+        _stations = stations;
+        
         _owners = owners;
         _jwt = jwt;
     }
-
 
     public async Task<LoginResponse> LoginAsync(string username, string password)
     {
@@ -29,7 +31,10 @@ public class AuthService : IAuthService
         if (user is null || !user.IsActive || !PasswordHasher.Verify(password, user.PasswordHash))
             throw new UnauthorizedAccessException("Invalid credentials");
 
-        var (token, exp) = _jwt.CreateToken(user.Username, user.Role);
+        // find station(s) assigned to this operator
+        var assignedStationIds = await _stations.FindAsync(s => s.AssignedOperators.Contains(username));
+        var stationIds = assignedStationIds.Select(s => s.Id).ToList();
+        var (token, exp) = _jwt.CreateToken(user.Username, user.Role, stationIds);
         
         // Check if user is an Owner and get owner details
         bool isOwner = false;
