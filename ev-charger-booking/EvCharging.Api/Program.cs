@@ -1,7 +1,6 @@
 using System.Text;
 using EvCharging.Api.Middleware;
 using EvCharging.Application.Contracts;
-using EvCharging.Domain.Entities;
 using EvCharging.Infrastructure.Config;
 using EvCharging.Infrastructure.Persistence;
 using EvCharging.Infrastructure.Repositories;
@@ -11,48 +10,50 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 
-// FluentValidation
-using FluentValidation;
-using FluentValidation.AspNetCore;
+// strong-typed seed usings
+using EvCharging.Domain.Entities;
+using EvCharging.Domain.Enums;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Serilog
-Log.Logger = new LoggerConfiguration()
-    .WriteTo.Console()
-    .CreateLogger();
+// ---- Logging (Serilog)
+Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateLogger();
 builder.Host.UseSerilog();
 
-// Configuration (Mongo)
+// ---- Config (Mongo)
 builder.Services.Configure<MongoSettings>(builder.Configuration.GetSection("Mongo"));
 builder.Services.AddSingleton<MongoDbContext>();
 
-// Generic repository
+// ---- CORS (allow Vite dev server)
+builder.Services.AddCors(opts =>
+{
+    opts.AddPolicy("Frontend", p =>
+        p.WithOrigins("http://localhost:5173", "https://localhost:5173")
+         .AllowAnyHeader()
+         .AllowAnyMethod());
+});
+
+// ---- Repositories
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
-// Services
+// ---- Services
 builder.Services.AddSingleton<JwtTokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IOwnerService, OwnerService>();
 builder.Services.AddScoped<IStationService, StationService>();
 builder.Services.AddScoped<IScheduleService, ScheduleService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
-builder.Services.AddScoped<IUserService, UserService>();
 
-// MVC / Controllers
 builder.Services.AddControllers();
 
-// FluentValidation: auto-run + discover validators from Application assembly
-builder.Services.AddFluentValidationAutoValidation();
-builder.Services.AddValidatorsFromAssemblyContaining<EvCharging.Application.Validators.CreateOwnerRequestValidator>();
-
-// Authentication (JWT)
+// ---- Auth (JWT)
 var jwtSecret = builder.Configuration["Jwt:Secret"]!;
 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.RequireHttpsMetadata = false; // dev-friendly
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -67,23 +68,15 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-// CORS (dev-friendly; tighten in prod)
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAll", b =>
-        b.AllowAnyOrigin()
-         .AllowAnyHeader()
-         .AllowAnyMethod());
-});
-
-// Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Global exception handling
-app.UseMiddleware<ExceptionMiddleware>();
+app.UseSerilogRequestLogging();
+
+// ---- CORS early
+app.UseCors("Frontend");
 
 if (app.Environment.IsDevelopment())
 {
@@ -91,20 +84,24 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseSerilogRequestLogging();
-app.UseHttpsRedirection();
-app.UseCors("AllowAll");
+// ✅ In dev we do NOT force HTTPS redirection
+// Only redirect in production (optional)
+if (app.Environment.IsProduction())
+{
+    app.UseHttpsRedirection();
+}
+
+app.UseMiddleware<ExceptionMiddleware>();
+
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 
-// Seed admin user + ensure Mongo indexes
+// ---- Seed default admin user (strongly-typed; fixes CS1977)
 await SeedAsync(app.Services);
-await EnsureIndexesAsync(app.Services);
 
 app.Run();
-
-// ----------------- Helpers -----------------
 
 static async Task SeedAsync(IServiceProvider services)
 {
@@ -118,18 +115,11 @@ static async Task SeedAsync(IServiceProvider services)
         {
             Id = Guid.NewGuid().ToString("N"),
             Username = "admin",
-            PasswordHash = EvCharging.Infrastructure.Security.PasswordHasher.Hash("Admin@123"),
-            Role = EvCharging.Domain.Enums.Roles.Backoffice,
+            PasswordHash = PasswordHasher.Hash("Admin@123"),
+            Role = Roles.Backoffice,
             IsActive = true
         };
         await users.InsertAsync(user);
         Console.WriteLine("Seeded default admin user: admin / Admin@123");
     }
-}
-
-static async Task EnsureIndexesAsync(IServiceProvider services)
-{
-    using var scope = services.CreateScope();
-    var ctx = scope.ServiceProvider.GetRequiredService<MongoDbContext>();
-    await EvCharging.Infrastructure.Persistence.IndexInitializer.EnsureIndexesAsync(ctx);
 }
