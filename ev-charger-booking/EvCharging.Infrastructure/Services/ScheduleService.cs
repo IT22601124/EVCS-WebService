@@ -64,7 +64,7 @@ public class ScheduleService : IScheduleService
         
         var stationIds = validSchedules.Select(s => s.StationId).Distinct().ToList();
         var stations = await _stations.FindAsync(st => stationIds.Contains(st.Id));
-        var stationDict = stations.ToDictionary(st => st.Id, st => new StationResponse(st.Id, st.Name, st.Address, st.Latitude, st.Longitude, st.Type, st.Slots, st.IsActive));
+        var stationDict = stations.ToDictionary(st => st.Id, st => new StationResponse(st.Id, st.Name, st.Address, st.Latitude, st.Longitude, st.Type, st.Slots, st.IsActive, st.AssignedOperators));
 
         return validSchedules
             .Where(s => !string.IsNullOrEmpty(s.StationId)) // Double-check for safety

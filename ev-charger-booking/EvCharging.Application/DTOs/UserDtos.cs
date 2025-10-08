@@ -4,4 +4,4 @@ public record CreateUserRequest(string Username, string Password, string Role, b
 public record UpdateUserRequest(string? Password, string Role, bool IsActive, string? AssignedStationId = null);
 public record UserResponse(string Id, string Username, string Role, bool IsActive, string? AssignedStationId);
 
-public record AssignStationRequest(string? StationId);
+public record UserAssignStationRequest(string? StationId);

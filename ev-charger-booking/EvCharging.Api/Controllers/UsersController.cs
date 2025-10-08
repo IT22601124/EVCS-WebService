@@ -42,7 +42,7 @@ public class UsersController : ControllerBase
     // body-based assign
     [HttpPost("{username}/assign")]
     [Authorize(Roles = Roles.Backoffice)]
-    public async Task<ActionResult<UserResponse>> AssignToStation(string username, [FromBody] AssignStationRequest req)
+    public async Task<ActionResult<UserResponse>> AssignToStation(string username, [FromBody] UserAssignStationRequest req)
         => Ok(await _users.AssignToStationAsync(username, req.StationId));
 
     // route-based assign so frontend can call /assign/{stationId}
@@ -79,6 +79,3 @@ public class UsersController : ControllerBase
     }
 
 }
-
-public record AssignStationRequest(string StationId);
-

@@ -14,7 +14,9 @@ public class BookingServiceTests
     {
         var bookings = new InMemoryRepository<Booking>();
         var schedules = new InMemoryRepository<StationSchedule>();
-        var svc = new BookingService(bookings, schedules);
+        var owners = new InMemoryRepository<EvOwner>();
+        var stations = new InMemoryRepository<Station>();
+        var svc = new BookingService(bookings, schedules, owners, stations);
 
         var req = new CreateBookingRequest("923456789V", "S1",
             DateOnly.FromDateTime(DateTime.UtcNow.AddDays(8)),
@@ -30,7 +32,9 @@ public class BookingServiceTests
     {
         var bookings = new InMemoryRepository<Booking>();
         var schedules = new InMemoryRepository<StationSchedule>();
-        var svc = new BookingService(bookings, schedules);
+        var owners = new InMemoryRepository<EvOwner>();
+        var stations = new InMemoryRepository<Station>();
+        var svc = new BookingService(bookings, schedules, owners, stations);
 
         var date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1));
 
@@ -67,7 +71,9 @@ public class BookingServiceTests
     {
         var bookings = new InMemoryRepository<Booking>();
         var schedules = new InMemoryRepository<StationSchedule>();
-        var svc = new BookingService(bookings, schedules);
+        var owners = new InMemoryRepository<EvOwner>();
+        var stations = new InMemoryRepository<Station>();
+        var svc = new BookingService(bookings, schedules, owners, stations);
 
         var date = DateOnly.FromDateTime(DateTime.UtcNow); // today
         // schedule for both the existing slot and the update slot (same)

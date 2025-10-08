@@ -125,8 +125,8 @@ public class RegistrationController : ControllerBase
     // Assign station to operator
     [HttpPost("assign-station")]
     [Authorize(Roles = Roles.Backoffice)]
-    [ProducesResponseType(typeof(AssignStationResponse), 200)]
-    public async Task<ActionResult<AssignStationResponse>> AssignStation([FromBody] AssignStationRequest req)
+    [ProducesResponseType(typeof(OwnerAssignStationResponse), 200)]
+    public async Task<ActionResult<OwnerAssignStationResponse>> AssignStation([FromBody] OwnerAssignStationRequest req)
     {
         try
         {
@@ -147,7 +147,7 @@ public class RegistrationController : ControllerBase
             user.AssignedStations.Add(req.StationId);
             await _users.UpdateAsync(user.Id, user);
 
-            var response = new AssignStationResponse(user.Username, user.AssignedStations);
+            var response = new OwnerAssignStationResponse(user.Username, user.AssignedStations);
             Console.WriteLine($"Assigned station {req.StationId} to operator {user.Username}");
             
             return Ok(response);
