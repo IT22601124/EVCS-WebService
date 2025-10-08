@@ -16,8 +16,12 @@ using EvCharging.Domain.Enums;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ---- Logging (Serilog)
-Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateLogger();
+// Serilog
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .WriteTo.File("logs/api-.log", rollingInterval: RollingInterval.Day)
+    .MinimumLevel.Information()
+    .CreateLogger();
 builder.Host.UseSerilog();
 
 // ---- Config (Mongo)
@@ -100,6 +104,7 @@ app.MapControllers();
 
 // ---- Seed default admin user (strongly-typed; fixes CS1977)
 await SeedAsync(app.Services);
+// await EnsureIndexesAsync(app.Services); // Temporarily disabled due to serialization conflicts
 
 app.Run();
 
@@ -115,11 +120,22 @@ static async Task SeedAsync(IServiceProvider services)
         {
             Id = Guid.NewGuid().ToString("N"),
             Username = "admin",
-            PasswordHash = PasswordHasher.Hash("Admin@123"),
-            Role = Roles.Backoffice,
-            IsActive = true
+            PasswordHash = EvCharging.Infrastructure.Security.PasswordHasher.Hash("Admin@123"),
+            Role = EvCharging.Domain.Enums.Roles.Backoffice,
+            IsActive = true,
+            Nic = "000000000V",
+            FullName = "System Administrator",
+            Email = "admin@evcharging.com",
+            Phone = "+94701234567"
         };
         await users.InsertAsync(user);
         Console.WriteLine("Seeded default admin user: admin / Admin@123");
     }
 }
+
+// static async Task EnsureIndexesAsync(IServiceProvider services)
+// {
+//     using var scope = services.CreateScope();
+//     var ctx = scope.ServiceProvider.GetRequiredService<MongoDbContext>();
+//     await EvCharging.Infrastructure.Persistence.IndexInitializer.EnsureIndexesAsync(ctx);
+// }
