@@ -24,6 +24,7 @@ public interface IStationService
     Task DeleteAsync(string id);
     Task<List<StationWithSchedulesResponse>> GetAllWithSchedulesAsync(DateOnly? date = null);
     Task<List<StationWithSchedulesResponse>> GetAllWithWeeklySchedulesAsync(DateOnly? startDate = null);
+    Task<List<StationResponse>> GetByAssignedOperatorAsync(string operatorUsername);
 }
 
 public interface IScheduleService
@@ -54,4 +55,9 @@ public interface IUserService
     Task<List<UserResponse>> GetAllAsync();
     Task<UserResponse?> GetByUsernameAsync(string username);
     Task UpdateAsync(string username, UpdateUserRequest req);
+
+    Task<UserResponse> AssignToStationAsync(string username, string stationId);
+    Task<UserResponse> UnassignFromStationAsync(string username);
+    Task<List<UserResponse>> GetOperatorsByStationAsync(string stationId);
+    Task<UserResponse?> GetCurrentAsync(string usernameFromToken);
 }

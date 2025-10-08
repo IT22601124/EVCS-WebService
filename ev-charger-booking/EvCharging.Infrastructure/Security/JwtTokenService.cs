@@ -16,7 +16,7 @@ public class JwtTokenService
     public JwtTokenService(IConfiguration config) { _config = config; }
 
 
-    public (string token, DateTime expiresAt) CreateToken(string username, string role)
+    public (string token, DateTime expiresAt) CreateToken(string username, string role, List<string>? stationIds = null)
     {
         var issuer = _config["Jwt:Issuer"]!;
         var audience = _config["Jwt:Audience"]!;
@@ -36,6 +36,12 @@ public class JwtTokenService
             new(ClaimTypes.Role, role)
         };
 
+        // assigned station ids as custom claim
+        if (stationIds != null && stationIds.Any())
+        {
+            foreach (var id in stationIds)
+                claims.Add(new Claim("stationId", id));
+        }
 
         var token = new JwtSecurityToken(issuer, audience, claims, expires: expires, signingCredentials: creds);
         var tokenStr = new JwtSecurityTokenHandler().WriteToken(token);

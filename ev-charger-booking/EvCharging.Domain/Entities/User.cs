@@ -16,4 +16,7 @@ public class User : EntityBase
     public string Email { get; set; } = default!;
     public string Phone { get; set; } = default!;
     public List<string> AssignedStations { get; set; } = new(); // Station IDs for operators
+
+    // Operator assignment (nullable). One operator -> one station
+    public string? AssignedStationId { get; set; }
 }

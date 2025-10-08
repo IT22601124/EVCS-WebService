@@ -10,12 +10,18 @@ using EvCharging.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
+using MongoDB.Bson.Serialization.Conventions;
+using MongoDB.Bson.Serialization;
 
 // FluentValidation
 using FluentValidation;
 using FluentValidation.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Ignore any extra/unknown fields in Mongo documents globally
+var ignoreExtras = new ConventionPack { new IgnoreExtraElementsConvention(true) };
+ConventionRegistry.Register("EVCS.IgnoreExtraElements", ignoreExtras, _ => true);
 
 // Serilog
 Log.Logger = new LoggerConfiguration()

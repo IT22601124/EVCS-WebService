@@ -12,10 +12,12 @@ public class AuthService : IAuthService
 {
     private readonly IRepository<User> _users;
     private readonly IRepository<EvOwner> _owners;
+    private readonly IRepository<Station> _stations;
     private readonly JwtTokenService _jwt;
 
 
     public AuthService(IRepository<User> users, IRepository<EvOwner> owners, JwtTokenService jwt)
+    public AuthService(IRepository<User> users, IRepository<Station> stations, JwtTokenService jwt)
     {
         _users = users; 
         _owners = owners;
@@ -68,5 +70,11 @@ public class AuthService : IAuthService
             isOwner,
             ownerNic
         );
+        // find station(s) assigned to this operator
+        var assignedStationIds = await _stations.FindAsync(s => s.AssignedOperators.Contains(username));
+        var stationIds = assignedStationIds.Select(s => s.Id).ToList();
+
+        var (token, exp) = _jwt.CreateToken(user.Username, user.Role, stationIds);
+        return (token, exp, user.Role);
     }
 }
