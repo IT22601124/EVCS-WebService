@@ -126,7 +126,7 @@ public class RegistrationController : ControllerBase
     [HttpPost("assign-station")]
     [Authorize(Roles = Roles.Backoffice)]
     [ProducesResponseType(typeof(AssignStationResponse), 200)]
-    public async Task<ActionResult<AssignStationResponse>> AssignStation([FromBody] AssignStationRequest req)
+    public async Task<ActionResult<AssignStationResponse>> AssignStation([FromBody] AssignStationToOperatorRequest req)
     {
         try
         {

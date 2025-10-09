@@ -16,11 +16,11 @@ public class AuthService : IAuthService
     private readonly JwtTokenService _jwt;
 
 
-    public AuthService(IRepository<User> users, IRepository<EvOwner> owners, JwtTokenService jwt)
-    public AuthService(IRepository<User> users, IRepository<Station> stations, JwtTokenService jwt)
+    public AuthService(IRepository<User> users, IRepository<EvOwner> owners, IRepository<Station> stations, JwtTokenService jwt)
     {
         _users = users; 
         _owners = owners;
+        _stations = stations;
         _jwt = jwt;
     }
 
@@ -70,11 +70,6 @@ public class AuthService : IAuthService
             isOwner,
             ownerNic
         );
-        // find station(s) assigned to this operator
-        var assignedStationIds = await _stations.FindAsync(s => s.AssignedOperators.Contains(username));
-        var stationIds = assignedStationIds.Select(s => s.Id).ToList();
-
-        var (token, exp) = _jwt.CreateToken(user.Username, user.Role, stationIds);
-        return (token, exp, user.Role);
+        // Note: Additional operator station assignment token logic removed — LoginResponse contains needed token
     }
 }

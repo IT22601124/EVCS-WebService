@@ -80,5 +80,5 @@ public class UsersController : ControllerBase
 
 }
 
-public record AssignStationRequest(string StationId);
+// AssignStationRequest is defined in EvCharging.Application.DTOs.UserDtos
 
