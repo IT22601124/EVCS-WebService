@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using EvCharging.Application.Contracts;
 using EvCharging.Application.DTOs;
 using EvCharging.Domain.Enums;
+using System.ComponentModel.DataAnnotations;
 
 namespace EvCharging.Api.Controllers;
 
@@ -20,8 +21,31 @@ public class SchedulesController : ControllerBase
         => Ok(await _schedules.UpsertAsync(req));
 
     [HttpGet]
-    public async Task<ActionResult<List<ScheduleResponse>>> Get(string stationId, DateOnly date)
-        => Ok(await _schedules.GetByStationAndDateAsync(stationId, date));
+    public async Task<ActionResult<List<ScheduleResponse>>> Get(
+        [FromQuery] string? stationId = null, 
+        [FromQuery] DateOnly? date = null)
+    {
+        // If no parameters provided, return all schedules
+        if (string.IsNullOrWhiteSpace(stationId) && date == null)
+        {
+            return Ok(await _schedules.GetAllAsync());
+        }
+        
+        // If stationId provided but no date, require date
+        if (!string.IsNullOrWhiteSpace(stationId) && date == null)
+        {
+            return BadRequest("Date is required when stationId is provided");
+        }
+        
+        // If date provided but no stationId, require stationId
+        if (string.IsNullOrWhiteSpace(stationId) && date != null)
+        {
+            return BadRequest("StationId is required when date is provided");
+        }
+        
+        // Both parameters provided - we know they're not null at this point
+        return Ok(await _schedules.GetByStationAndDateAsync(stationId!, date!.Value));
+    }
 
     [HttpGet("all")]
     public async Task<ActionResult<List<ScheduleResponse>>> GetAll()

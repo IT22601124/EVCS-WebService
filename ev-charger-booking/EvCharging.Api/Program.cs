@@ -49,6 +49,7 @@ builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 // ---- Services
 builder.Services.AddSingleton<JwtTokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IOwnerService, OwnerService>();
 builder.Services.AddScoped<IStationService, StationService>();
 builder.Services.AddScoped<IScheduleService, ScheduleService>();
