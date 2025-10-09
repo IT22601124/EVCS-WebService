@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using EvCharging.Application.Contracts;
 using EvCharging.Application.DTOs;
 using EvCharging.Domain.Enums;
+using System.Security.Claims;
+using System.Text.Json;
 
 namespace EvCharging.Api.Controllers;
 
@@ -11,34 +13,80 @@ namespace EvCharging.Api.Controllers;
 public class StationsController : ControllerBase
 {
     private readonly IStationService _stations;
-    public StationsController(IStationService stations) { _stations = stations; }
+    private readonly ILogger<StationsController> _logger;
+    
+    public StationsController(IStationService stations, ILogger<StationsController> logger) 
+    { 
+        _stations = stations;
+        _logger = logger;
+    }
 
 
     [HttpPost]
-    [Authorize(Roles = Roles.Backoffice)]
+    [Authorize(Roles = $"{Roles.Backoffice},{Roles.Operator}")]
     public async Task<ActionResult<StationResponse>> Create([FromBody] CreateStationRequest req)
         => Ok(await _stations.CreateAsync(req));
 
 
     [HttpGet]
     [Authorize]
-    public async Task<ActionResult<List<StationResponse>>> GetAll()
+    public async Task<ActionResult<List<StationResponse>>> GetAll([FromServices] IUserService users)
     {
-        var role = User.FindFirst("role")?.Value;
-        var username = User.Identity?.Name;
+        var role = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
+        var username = User.FindFirst(ClaimTypes.Name)?.Value ?? User.Identity?.Name;
 
-        if (role == Roles.Operator && !string.IsNullOrEmpty(username))
+        // If Operator, return ONLY their assigned station (if any)
+        if (role == Roles.Operator && !string.IsNullOrWhiteSpace(username))
         {
-            var items = await _stations.GetByAssignedOperatorAsync(username);
-            return Ok(items);
+            var me = await users.GetCurrentAsync(username); // includes AssignedStationId
+            if (me?.AssignedStationId is string sid && !string.IsNullOrWhiteSpace(sid))
+            {
+                var st = await _stations.GetByIdAsync(sid);
+                // if not found, return empty list to front-end
+                return Ok(st is null ? new List<StationResponse>() : new List<StationResponse> { st });
+            }
+            return Ok(new List<StationResponse>()); // no assignment
         }
 
         // Backoffice sees all
         return Ok(await _stations.GetAllAsync());
     }
+    [Authorize(Roles = $"{Roles.Backoffice},{Roles.Operator},{Roles.Owner}")]
+    public async Task<ActionResult<List<StationResponse>>> GetAll()
+        => Ok(await _stations.GetAllAsync());
+
+
+    [HttpGet("with-schedules")]
+    [Authorize(Roles = $"{Roles.Backoffice},{Roles.Operator},{Roles.Owner}")]
+    public async Task<ActionResult<List<StationWithSchedulesResponse>>> GetAllWithSchedules([FromQuery] DateOnly? date = null)
+        => Ok(await _stations.GetAllWithSchedulesAsync(date));
+
+
+    [HttpGet("with-weekly-schedules")]
+    [Authorize(Roles = $"{Roles.Backoffice},{Roles.Operator},{Roles.Owner}")]
+    public async Task<ActionResult<List<StationWithSchedulesResponse>>> GetAllWithWeeklySchedules([FromQuery] DateOnly? startDate = null)
+    {
+        var result = await _stations.GetAllWithWeeklySchedulesAsync(startDate);
+        
+        // Print the response to console
+        var responseJson = JsonSerializer.Serialize(result, new JsonSerializerOptions 
+        { 
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+        
+        Console.WriteLine("=== WEEKLY SCHEDULES RESPONSE ===");
+        Console.WriteLine(responseJson);
+        Console.WriteLine("=== END RESPONSE ===");
+        
+        _logger.LogInformation("Weekly schedules response: {Response}", responseJson);
+        
+        return Ok(result);
+    }
+
 
     [HttpGet("{id}")]
-    [Authorize]
+    [Authorize(Roles = $"{Roles.Backoffice},{Roles.Operator},{Roles.Owner}")]
     public async Task<ActionResult<StationResponse>> GetById(string id)
     {
         var item = await _stations.GetByIdAsync(id);
@@ -47,10 +95,22 @@ public class StationsController : ControllerBase
 
 
     [HttpPut("{id}")]
-    [Authorize(Roles = Roles.Backoffice)]
+    [Authorize(Roles = $"{Roles.Backoffice},{Roles.Operator}")]
     public async Task<IActionResult> Update(string id, [FromBody] UpdateStationRequest req)
     {
         await _stations.UpdateAsync(id, req);
+        return NoContent();
+    }
+
+    [HttpDelete("{id}")]
+    [Authorize(Roles = $"{Roles.Backoffice},{Roles.Operator}")]
+    public async Task<IActionResult> Delete(string id)
+    {
+        var station = await _stations.GetByIdAsync(id);
+        if (station == null)
+            return NotFound();
+            
+        await _stations.DeleteAsync(id);
         return NoContent();
     }
 

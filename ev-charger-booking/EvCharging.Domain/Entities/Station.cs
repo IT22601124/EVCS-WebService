@@ -14,6 +14,6 @@ public class Station : EntityBase
     public int Slots { get; set; }
     public bool IsActive { get; set; } = true;
 
-    // Assigned Operator username (optional)
-    public string? AssignedOperator { get; set; }
-}
+    // Multi-operator support
+    public List<string> AssignedOperators { get; set; } = new();
+}   

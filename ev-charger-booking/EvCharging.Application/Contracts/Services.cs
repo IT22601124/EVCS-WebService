@@ -4,7 +4,7 @@ namespace EvCharging.Application.Contracts;
 
 public interface IAuthService
 {
-    Task<(string token, DateTime expiresAt, string role)> LoginAsync(string username, string password);
+    Task<LoginResponse> LoginAsync(string username, string password);
 }
 
 public interface IOwnerService
@@ -21,6 +21,9 @@ public interface IStationService
     Task<List<StationResponse>> GetAllAsync();
     Task<StationResponse?> GetByIdAsync(string id);
     Task UpdateAsync(string id, UpdateStationRequest req);
+    Task DeleteAsync(string id);
+    Task<List<StationWithSchedulesResponse>> GetAllWithSchedulesAsync(DateOnly? date = null);
+    Task<List<StationWithSchedulesResponse>> GetAllWithWeeklySchedulesAsync(DateOnly? startDate = null);
     Task<List<StationResponse>> GetByAssignedOperatorAsync(string operatorUsername);
 }
 
@@ -28,6 +31,9 @@ public interface IScheduleService
 {
     Task<ScheduleResponse> UpsertAsync(UpsertScheduleRequest req);
     Task<List<ScheduleResponse>> GetByStationAndDateAsync(string stationId, DateOnly date);
+    Task<List<ScheduleResponse>> GetAllAsync();
+    Task<List<ScheduleWithStationResponse>> GetAllWithStationsAsync();
+    Task<int> CleanupInvalidSchedulesAsync();
 }
 
 public interface IBookingService

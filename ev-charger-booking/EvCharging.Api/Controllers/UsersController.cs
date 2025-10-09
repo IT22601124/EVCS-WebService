@@ -9,7 +9,7 @@ namespace EvCharging.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize] // require authentication for the controller; restrict specific actions by role below
+[Authorize]
 public class UsersController : ControllerBase
 {
     private readonly IUserService _users;
@@ -46,13 +46,19 @@ public class UsersController : ControllerBase
         return NoContent();
     }
 
-    // Admin only
+    // body-based assign
     [HttpPost("{username}/assign")]
     [Authorize(Roles = Roles.Backoffice)]
     public async Task<ActionResult<UserResponse>> AssignToStation(string username, [FromBody] AssignStationRequest req)
         => Ok(await _users.AssignToStationAsync(username, req.StationId));
 
-    // Admin only
+    // route-based assign so frontend can call /assign/{stationId}
+    [HttpPost("{username}/assign/{stationId}")]
+    [Authorize(Roles = Roles.Backoffice)]
+    public async Task<ActionResult<UserResponse>> AssignToStationViaRoute(string username, string stationId)
+        => Ok(await _users.AssignToStationAsync(username, stationId));
+
+    // unassign
     [HttpPost("{username}/unassign")]
     [Authorize(Roles = Roles.Backoffice)]
     public async Task<ActionResult<UserResponse>> UnassignFromStation(string username)
@@ -71,9 +77,8 @@ public class UsersController : ControllerBase
     {
         // Try common claim names. Adjust if your tokens use different names.
         var username = User.FindFirstValue(ClaimTypes.Name)
-                       ?? User.FindFirstValue("username")
-                       ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
-                       ?? User.Identity?.Name;
+                    ?? User.FindFirstValue("username")
+                    ?? User.Identity?.Name;
 
         if (string.IsNullOrWhiteSpace(username))
             return Unauthorized();
@@ -81,6 +86,8 @@ public class UsersController : ControllerBase
         var me = await _users.GetCurrentAsync(username);
         return me is null ? NotFound() : Ok(me);
     }
+
 }
 
-public record AssignStationRequest(string StationId);
+// AssignStationRequest is defined in EvCharging.Application.DTOs.UserDtos
+
