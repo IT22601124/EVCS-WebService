@@ -42,6 +42,7 @@ public interface IBookingService
     Task<BookingResponse?> GetByIdAsync(string id);
     Task<List<BookingResponse>> GetByOwnerAsync(string nic);
     Task<List<BookingResponse>> GetByStationAndDateAsync(string stationId, DateOnly date);
+    Task<List<BookingResponse>> GetByStationAsync(string stationId);
     Task UpdateAsync(string id, UpdateBookingRequest req);
     Task CancelAsync(string id);
     Task<BookingResponse> ApproveAsync(string id);

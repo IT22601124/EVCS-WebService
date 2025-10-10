@@ -107,6 +107,20 @@ public class BookingService : IBookingService
         return results;
     }
 
+    public async Task<List<BookingResponse>> GetByStationAsync(string stationId)
+    {
+        var bookings = await _bookings.FindAsync(b => b.StationId == stationId);
+        var station = await _stations.GetByIdAsync(stationId);
+        
+        var results = new List<BookingResponse>();
+        foreach (var booking in bookings)
+        {
+            var owner = (await _owners.FindAsync(o => o.Nic == booking.Nic)).FirstOrDefault();
+            results.Add(MapEnhanced(booking, owner, station));
+        }
+        return results.OrderByDescending(b => b.Date).ThenBy(b => b.Start).ToList();
+    }
+
     public async Task UpdateAsync(string id, UpdateBookingRequest req)
     {
         var e = await _bookings.GetByIdAsync(id) ?? throw new KeyNotFoundException("Booking not found");
@@ -216,7 +230,7 @@ public class BookingService : IBookingService
 
         var nowUtc = DateTime.UtcNow;
         var startUtc = new DateTime(e.Date.Year, e.Date.Month, e.Date.Day, e.Start.Hour, e.Start.Minute, e.Start.Second, DateTimeKind.Utc);
-        if (startUtc - nowUtc < TimeSpan.FromHours(12))
-            throw new InvalidOperationException("Changes are allowed only up to 12 hours before the session start");
+        // if (startUtc - nowUtc < TimeSpan.FromHours(12))
+        //     throw new InvalidOperationException("Changes are allowed only up to 12 hours before the session start");
     }
 }

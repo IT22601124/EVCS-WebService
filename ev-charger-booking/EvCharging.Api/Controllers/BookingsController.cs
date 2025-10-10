@@ -52,6 +52,15 @@ public class BookingsController : ControllerBase
     public async Task<ActionResult<List<BookingResponse>>> GetByOwner(string nic)
         => Ok(await _bookings.GetByOwnerAsync(nic));
 
+    [HttpGet("by-station/{stationId}")]
+    [Authorize]
+    public async Task<ActionResult<List<BookingResponse>>> GetByStation(string stationId)
+    {
+        _logger.LogInformation("Getting all bookings for station {StationId}", stationId);
+        var bookings = await _bookings.GetByStationAsync(stationId);
+        return Ok(bookings);
+    }
+
     [HttpGet]
     [Authorize]
     public async Task<ActionResult<List<BookingResponse>>> GetByStationAndDate([FromQuery] string stationId, [FromQuery] DateOnly date)
@@ -68,7 +77,7 @@ public class BookingsController : ControllerBase
     { await _bookings.CancelAsync(id); return NoContent(); }
 
     [HttpPost("{id}/approve")]
-    [Authorize(Roles = Roles.Backoffice)]
+    [Authorize(Roles = Roles.Operator + "," + Roles.Backoffice)]
     public async Task<ActionResult<BookingResponse>> Approve(string id)
         => Ok(await _bookings.ApproveAsync(id));
 
